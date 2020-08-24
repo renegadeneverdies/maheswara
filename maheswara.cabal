@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b437dea52e920d24ba10b2f3a2c3701404f561fae261ab7484588c59a5833c17
+-- hash: 54a3fc3a034210acf46c1d79d739e4a20d8fd6232e4aa214d13b91c044940e2d
 
 name:           maheswara
 version:        0.1.0.0
@@ -40,7 +40,10 @@ library
     , http-client
     , http-client-tls
     , http-conduit
+    , lens
+    , lens-aeson
     , mtl
+    , string-conversions
     , text
     , yaml
   default-language: Haskell2010
@@ -59,8 +62,11 @@ executable maheswara-exe
     , http-client
     , http-client-tls
     , http-conduit
+    , lens
+    , lens-aeson
     , maheswara
     , mtl
+    , string-conversions
     , text
     , yaml
   default-language: Haskell2010
@@ -80,8 +86,11 @@ test-suite maheswara-test
     , http-client
     , http-client-tls
     , http-conduit
+    , lens
+    , lens-aeson
     , maheswara
     , mtl
+    , string-conversions
     , text
     , yaml
   default-language: Haskell2010
