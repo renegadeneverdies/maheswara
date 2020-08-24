@@ -1,0 +1,57 @@
+name:                maheswara
+version:             0.1.0.0
+github:              "rischev/maheswara"
+license:             BSD3
+author:              "Roman Barnoul"
+maintainer:          "romanscherbakov.i@gmail.com"
+copyright:           "None"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/rischev/maheswara#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- http-conduit
+- http-client
+- http-client-tls
+- aeson
+- yaml
+- text
+- mtl
+
+
+library:
+  source-dirs: src
+
+executables:
+  maheswara-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - maheswara
+
+tests:
+  maheswara-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - maheswara
