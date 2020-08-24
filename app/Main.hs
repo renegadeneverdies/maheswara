@@ -27,15 +27,14 @@ import Entities
 fetchJSON :: Request -> IO L8.ByteString
 fetchJSON = (getResponseBody `fmap`) . httpLBS
 
-getUpdates :: Request
-getUpdates = "https://api.telegram.org/bot1374635961:AAFqeXWx5nfzseX4FlmGEfSWUQkk70HSqQ8/getUpdates"
+getUpdates :: String -> Request
+getUpdates token = parseRequest_ (token <> "getUpdates")
 
 getLast :: Maybe Updates -> Update
 getLast = last . fromJust
 
-main :: IO Update
+main :: IO ()
 main = do
-  response <- fetchJSON getUpdates
-  return $ getLast (parseMaybe updates =<< decode response)
-
---a = "chat":{"id":334428388,"first_name":"roman","username":"renegadeneverdies","type":"private"}
+  token <- readFile "token"
+  response <- fetchJSON (getUpdates (init token))
+  B8.putStrLn $ Yaml.encode (getLast (parseMaybe updates =<< decode response))
