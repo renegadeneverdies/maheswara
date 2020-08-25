@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 module Entities ( User(..)
-                , Message(..)
+                , RMessage(..)
+                , SMessage (..)
                 , Chat(..)
                 , Update(..)
                 , Action(..)
@@ -20,8 +21,8 @@ data User = User
           , is_bot' :: Bool
           , first_name' :: T.Text
           , last_name' :: Maybe T.Text
-          , username' :: T.Text
-          , language_code' :: String
+          , username' :: Maybe T.Text
+          --, language_code' :: Maybe String
           } deriving (Show, Generic)
 
 instance FromJSON User where
@@ -33,26 +34,39 @@ instance ToJSON User where
              fieldLabelModifier = init }
 
 us = User { id' = 12, is_bot' = False, first_name' = T.pack "roman", last_name' = Nothing,
-           username' = T.pack "rischev", language_code' = "en" }
+           username' = Just $ T.pack "rischev" }--, language_code' = Just "en" }
 
-data Message = Message
+data RMessage = RMessage
              { message_id :: Integer
              , from :: User
              , date :: Integer
              , chat :: Chat
-             , text :: T.Text
+             , text :: Maybe T.Text
              } deriving (Show, Generic, ToJSON, FromJSON)
 
-m = Message { message_id = 12345, from = us, date = 1282132989, chat = c, text = T.pack "yo" }
+data SMessage = SMessage
+              { chat_id' :: Integer
+              , text' :: T.Text
+              } deriving (Show, Generic)
+
+instance FromJSON SMessage where
+  parseJSON = genericParseJSON defaultOptions {
+             fieldLabelModifier = init }
+
+instance ToJSON SMessage where
+  toJSON = genericToJSON defaultOptions {
+             fieldLabelModifier = init }
+
+m = RMessage { message_id = 12345, from = us, date = 1282132989, chat = c, text = Just $ T.pack "yo" }
 
 data Chat = Chat
           { _id :: Integer
           , _type :: T.Text
-          , _username :: T.Text
           , _first_name :: T.Text
+          , _username :: Maybe T.Text
           } deriving (Show, Generic)
 
-c = Chat { _id = 3, _type = T.pack "private", _username = T.pack "rischev",
+c = Chat { _id = 3, _type = T.pack "private", _username = Just $ T.pack "rischev",
           _first_name = T.pack "roman" }
 
 instance FromJSON Chat where
@@ -65,7 +79,7 @@ instance ToJSON Chat where
 
 data Update = Update
             { update_id :: Integer
-            , message :: Message
+            , message :: RMessage
             } deriving (Show, Generic, ToJSON, FromJSON)
 
 up = Update { update_id = 3, message = m }
@@ -78,5 +92,7 @@ updates = withObject "updates" $ \o -> o .: (tp "result")
 ups = [up]
 
 data Action = DoNothing
-            | Echo Message
+            | Echo SMessage
             deriving Show
+
+data HashTable
