@@ -5,6 +5,7 @@ module Main where
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Yaml as Yaml
+import qualified Data.Text as T
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text
@@ -23,8 +24,20 @@ fetchJSON req man = do
   response <- httpLbs req man
   return (responseBody response)
 
-getUpdates :: String -> Request
-getUpdates token = parseRequest_ (token <> "getUpdates?timeout=5")
+getUpdates :: Offset -> String -> Request
+getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset" <> (show offset))
+
+-- test version. Proposal: Content type
+getContent :: RMessage -> Maybe T.Text
+getContent = text
+
+setReply :: Integer -> T.Text -> T.Text -> Maybe T.Text -> Maybe (Bool, SMessage) -- bool indicates if IO is needed
+setReply chat repeat' help mContent = do
+  content <- mContent
+  case (T.unpack content) of
+    "/help" -> return $ (False, SMessage { chat_id' = chat, text' = help })
+    "/repeat" -> return $ (True, SMessage { chat_id' = chat, text' = repeat' }) -- repeat must be reworked
+    _ -> return $ (False, SMessage { chat_id' = chat, text' = content })
 
 sendMessage :: String -> SMessage -> Request
 sendMessage token msg = request' { method = "POST"
@@ -32,15 +45,19 @@ sendMessage token msg = request' { method = "POST"
                                  , requestHeaders = [("Content-Type","application/json; charset=utf-8")] }
   where request' = parseRequest_ (token <> "sendMessage")
 
-
-getLast :: Maybe Updates -> Update
-getLast = last . fromJust
+-- replace partial functions
+getLast :: Maybe Updates -> Maybe Update
+getLast (Just []) = Nothing
+getLast (Just x) = Just (last x)
 {-
-run :: StateT HashTable IO ()
-run = undefined
+  run :: Manager -> Token -> StateT Bot IO ()
+  run manager token = do
+    bot <- get
+    let offset = if null (getUsers bot) then 0 else
+
 -}
 main :: IO ()
-main = forever $ do
+main = do
   manager <- newManager tlsManagerSettings
   token' <- readFile "token"
   let token = init token'

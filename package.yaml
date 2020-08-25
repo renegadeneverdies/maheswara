@@ -26,12 +26,10 @@ dependencies:
 - http-client
 - http-client-tls
 - aeson
-- lens-aeson
-- lens
+- containers
 - yaml
 - text
 - mtl
-- string-conversions
 
 
 library:
