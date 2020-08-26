@@ -7,6 +7,7 @@ import Data.Aeson.Types
 import qualified Data.Text as T
 import GHC.Generics
 import Data.Map hiding (drop)
+import Network.HTTP.Client (Manager(..))
 
 tp = T.pack
 
@@ -14,7 +15,7 @@ data User = User
           { id' :: Integer
           , is_bot' :: Bool
           , first_name' :: T.Text
-          } deriving (Show, Generic)
+          } deriving (Show, Generic, Eq)
 
 instance FromJSON User where
   parseJSON = genericParseJSON defaultOptions {
@@ -30,7 +31,7 @@ data RMessage = RMessage
               , date :: Integer
               , chat :: Chat
               , text :: Maybe T.Text
-              } deriving (Show, Generic, ToJSON, FromJSON)
+              } deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data SMessage = SMessage
               { chat_id' :: Integer
@@ -49,7 +50,7 @@ data Chat = Chat
           { _id :: Integer
           , _type :: T.Text
           , _first_name :: T.Text
-          } deriving (Show, Generic)
+          } deriving (Show, Generic, Eq)
 
 instance FromJSON Chat where
   parseJSON = genericParseJSON defaultOptions {
@@ -62,23 +63,25 @@ instance ToJSON Chat where
 data Update = Update
             { update_id :: Integer
             , message :: RMessage
-            } deriving (Show, Generic, ToJSON, FromJSON)
+            } deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 type Updates = [Update]
 
 updates :: Value -> Parser Updates
 updates = withObject "updates" $ \o -> o .: (tp "result")
 
-data Action = DoNothing
-            | Echo SMessage
-            deriving (Show, Eq)
+data Action = Await | Echo { getEcho :: SMessage } deriving (Show, Eq)
 
 type UserId = Integer
 type Offset = Integer
+type Repeat = Integer
 type Token = String
 
 data Bot = Bot
-         { getUsers :: (Map UserId Offset)
+         { getUsers :: (Map UserId Repeat)
          , getAction :: Action
          , getHelp :: T.Text
-         } deriving (Eq, Show)
+         , getManager :: Manager
+         , getToken :: Token
+         , getOffset :: Offset
+         }

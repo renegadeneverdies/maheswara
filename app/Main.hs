@@ -12,9 +12,11 @@ import qualified Data.Text
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 
+import Prelude hiding (repeat)
 import System.IO
 import Data.Monoid ((<>))
 import Data.Maybe (fromJust, fromMaybe)
+import qualified Data.Map as Map
 import Entities
 import Control.Monad
 import Control.Monad.State
@@ -25,7 +27,7 @@ fetchJSON req man = do
   return (responseBody response)
 
 getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset" <> (show offset))
+getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> (show offset))
 
 -- test version. Proposal: Content type
 getContent :: RMessage -> Maybe T.Text
@@ -45,24 +47,46 @@ sendMessage token msg = request' { method = "POST"
                                  , requestHeaders = [("Content-Type","application/json; charset=utf-8")] }
   where request' = parseRequest_ (token <> "sendMessage")
 
--- replace partial functions
 getLast :: Maybe Updates -> Maybe Update
 getLast (Just []) = Nothing
 getLast (Just x) = Just (last x)
-{-
-  run :: Manager -> Token -> StateT Bot IO ()
-  run manager token = do
-    bot <- get
-    let offset = if null (getUsers bot) then 0 else
 
--}
+run :: StateT Bot IO ()
+run = do
+  bot <- get
+  let users = getUsers bot
+      action = getAction bot
+      help = getHelp bot
+      manager = getManager bot
+      token = getToken bot
+      offset = getOffset bot
+  unless (action == Await) (lift (httpLbs (sendMessage token (getEcho action)) manager)
+                             >> put (bot { getAction = Await, getOffset = offset + 1 })
+                             >> run)
+  upds <- lift $ fetchJSON (getUpdates offset token) manager
+  let list = parseMaybe updates =<< decode upds
+  when (list == Just []) (put (bot { getAction = Await }) >> run)
+  let current = head (fromJust list)
+      content = getContent (message current)
+      newMsg = SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
+  put bot { getAction = Echo newMsg, getOffset = update_id current }
+  run
+
 main :: IO ()
 main = do
   manager <- newManager tlsManagerSettings
   token' <- readFile "token"
+  help' <- readFile "help"
+  repeat' <- readFile "repeat"
   let token = init token'
-  response <- fetchJSON (getUpdates token) manager
-  let replyTo = message $ getLast (parseMaybe updates =<< decode response)
-      newMsg = SMessage { chat_id' = _id (chat replyTo), text' = fromMaybe mempty (text replyTo) }
-  response' <- httpLbs (sendMessage token newMsg) manager
-  return ()
+      help = T.pack (init help')
+      repeat = T.pack (init repeat')
+      bot = Bot { getUsers = Map.empty
+                , getAction = Await
+                , getHelp = help
+                , getManager = manager
+                , getToken = token
+                , getOffset = 0 }
+  initial <- fetchJSON (getUpdates 0 token) manager
+  let offset = fromMaybe 0 $ fmap update_id (getLast (parseMaybe updates =<< decode initial))
+  evalStateT run (bot { getOffset = offset })
