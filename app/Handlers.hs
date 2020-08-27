@@ -15,13 +15,13 @@ getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset="
 getContent :: RMessage -> Maybe T.Text
 getContent = text
 
-setReply :: Integer -> T.Text -> Maybe KeyboardMarkup -> T.Text -> Maybe T.Text -> Maybe (Bool, SMessage) -- bool indicates if IO is needed
+setReply :: Integer -> T.Text -> KeyboardMarkup -> T.Text -> Maybe T.Text -> Maybe (Bool, SMessage) -- bool indicates if IO is need
 setReply chat repeat' keyboard help mContent = do
   content <- mContent
   case (T.unpack content) of
-    "/help" -> return $ (False, SMessage { chat_id' = chat, text' = help, reply_markup' = Nothing })
+    "/help" -> return $ (False, SMessage { chat_id' = chat, text' = help, reply_markup' = KeyboardMarkup [[]] })
     "/repeat" -> return $ (True, SMessage { chat_id' = chat, text' = repeat', reply_markup' = keyboard }) -- repeat must be reworked
-    _ -> return $ (False, SMessage { chat_id' = chat, text' = content, reply_markup' = Nothing })
+    _ -> return $ (False, SMessage { chat_id' = chat, text' = content, reply_markup' = KeyboardMarkup [[]] })
 
 sendMessage :: String -> SMessage -> Request
 sendMessage token msg = request' { method = "POST"
