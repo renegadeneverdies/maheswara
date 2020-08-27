@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2b554526139c0b87b47a8c20b1f269660a3bd34b9f81d52d375908761264b2d9
+-- hash: 10081e04c523361ac5eb33c2262ab34ffc891d34ed717a28d8023e0e5dfcff15
 
 name:           maheswara
 version:        0.1.0.0
@@ -49,6 +49,7 @@ library
 executable maheswara-exe
   main-is: Main.hs
   other-modules:
+      Handlers
       Paths_maheswara
   hs-source-dirs:
       app

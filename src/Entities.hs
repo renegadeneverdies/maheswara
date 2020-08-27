@@ -36,7 +36,17 @@ data RMessage = RMessage
 data SMessage = SMessage
               { chat_id' :: Integer
               , text' :: T.Text
+              , reply_markup' :: Maybe KeyboardMarkup
               } deriving (Show, Eq, Generic)
+
+instance Semigroup SMessage where
+  sm1 <> sm2 = SMessage { chat_id' = (chat_id' sm1) + (chat_id' sm2)
+                        , text' = (text' sm1) <> (text' sm2)
+                        , reply_markup' = reply_markup' sm1 }
+
+instance Monoid SMessage where
+  mappend = (<>)
+  mempty = SMessage { chat_id' = 0, text' = mempty, reply_markup' = Nothing }
 
 instance FromJSON SMessage where
   parseJSON = genericParseJSON defaultOptions {
@@ -81,7 +91,25 @@ data Bot = Bot
          { getUsers :: (Map UserId Repeat)
          , getAction :: Action
          , getHelp :: T.Text
+         , getRepeat :: T.Text
          , getManager :: Manager
          , getToken :: Token
          , getOffset :: Offset
          }
+
+data KeyboardMarkup = KeyboardMarkup
+                    { keyboard :: [KeyboardButton] } deriving (Show, Eq, ToJSON, FromJSON, Generic)
+
+data KeyboardButton = KeyboardButton
+                    { _text :: Integer } deriving (Show, Eq, Generic)
+
+defaultKeyboard :: Maybe KeyboardMarkup
+defaultKeyboard = Just (KeyboardMarkup $ fmap KeyboardButton [1..5])
+
+instance FromJSON KeyboardButton where
+  parseJSON = genericParseJSON defaultOptions {
+             fieldLabelModifier = drop 1 }
+
+instance ToJSON KeyboardButton where
+  toJSON = genericToJSON defaultOptions {
+             fieldLabelModifier = drop 1 }
