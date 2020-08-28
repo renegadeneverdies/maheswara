@@ -7,7 +7,9 @@ import qualified Data.ByteString.Char8 as B8
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Data.Monoid ((<>))
+import Data.Maybe (fromMaybe)
 import Data.Aeson
+import qualified Data.Map as Map
 
 getUpdates :: Offset -> String -> Request
 getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> (show offset))
@@ -15,13 +17,17 @@ getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset="
 getContent :: RMessage -> Maybe T.Text
 getContent = text
 
-setReply :: Integer -> T.Text -> KeyboardMarkup -> T.Text -> Maybe T.Text -> Maybe (Bool, SMessage) -- bool indicates if IO is need
-setReply chat repeat' keyboard help mContent = do
+setReply :: Integer -> Bot-> Maybe T.Text -> Maybe (Repeat, SMessage) -- bool indicates if IO is need
+setReply chat bot mContent = do
   content <- mContent
-  case (T.unpack content) of
-    "/help" -> return $ (False, SMessage { chat_id' = chat, text' = help, reply_markup' = KeyboardMarkup [[]] })
-    "/repeat" -> return $ (True, SMessage { chat_id' = chat, text' = repeat', reply_markup' = keyboard }) -- repeat must be reworked
-    _ -> return $ (False, SMessage { chat_id' = chat, text' = content, reply_markup' = KeyboardMarkup [[]] })
+  let handleInput :: String -> (Repeat, SMessage)
+      handleInput "/help" = (userRepeat, newMsg { text' = getHelp bot, reply_markup' = KeyboardMarkup [[]] })
+      handleInput "/repeat" = (userRepeat, newMsg { text' = getRepeat bot, reply_markup' = defaultKeyboard }) -- repeat must be reworked
+      handleInput ('/':x) = (read x :: Repeat, newMsg { text' = T.pack ("Reply count set to " ++ x), reply_markup' = KeyboardMarkup [[]] })
+      handleInput _ = (userRepeat, newMsg { text' = content, reply_markup' = KeyboardMarkup [[]] })
+      newMsg = SMessage { chat_id' = chat }
+      userRepeat = fromMaybe 1 (Map.lookup chat (getUsers bot))
+  return $ handleInput (T.unpack content)
 
 sendMessage :: String -> SMessage -> Request
 sendMessage token msg = request' { method = "POST"

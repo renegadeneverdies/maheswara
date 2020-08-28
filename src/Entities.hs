@@ -80,11 +80,11 @@ type Updates = [Update]
 updates :: Value -> Parser Updates
 updates = withObject "updates" $ \o -> o .: (tp "result")
 
-data Action = Await | Echo { getEcho :: SMessage } deriving (Show, Eq)
+data Action = Await | Echo { getEcho :: SMessage, getRepeat' :: Repeat } deriving (Show, Eq)
 
 type UserId = Integer
 type Offset = Integer
-type Repeat = Integer
+type Repeat = Int
 type Token = String
 
 data Bot = Bot

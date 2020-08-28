@@ -34,8 +34,7 @@ run = do
       manager = getManager bot
       token = getToken bot
       offset = getOffset bot
-
-  unless (action == Await) (lift (httpLbs (sendMessage token (getEcho action)) manager)
+  unless (action == Await) (replicateM_ (getRepeat' action) (lift (httpLbs (sendMessage token (getEcho action)) manager))
                              >> put (bot { getAction = Await, getOffset = offset + 1 })
                              >> run)
   upds <- lift $ fetchJSON (getUpdates offset token) manager
@@ -43,10 +42,11 @@ run = do
   when (list == Just []) (put (bot { getAction = Await }) >> run)
   let current = head (fromJust list)
       content = getContent (message current)
-      newReply = fromMaybe (False, mempty) (setReply (_id (chat $ message current)) repeat defaultKeyboard help content)-- SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
-      isIO = fst newReply
+      chatId = (_id (chat $ message current))
+      newReply = fromMaybe (1, mempty) (setReply chatId bot content)-- SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
+      newRepeat = fst newReply
   lift $ print (snd newReply)
-  put bot { getAction = Echo (snd newReply), getOffset = update_id current }
+  put bot { getAction = Echo (snd newReply) newRepeat, getOffset = update_id current }
   run
 
 main :: IO ()
