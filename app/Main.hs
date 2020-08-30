@@ -23,7 +23,7 @@ fetchJSON :: Request -> Manager -> IO L8.ByteString
 fetchJSON req man = do
   response <- httpLbs req man
   return (responseBody response)
-
+{-
 run :: StateT Bot IO ()
 run = do
   bot <- get
@@ -44,9 +44,8 @@ run = do
       content = getContent (message current)
       chatId = (_id (chat $ message current))
       newReply = fromMaybe (1, mempty) (setReply chatId bot content)-- SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
-      newRepeat = fst newReply
   lift $ print (snd newReply)
-  put bot { getAction = Echo (snd newReply) newRepeat, getOffset = update_id current }
+  put bot { getAction = Echo (snd newReply) (fst newReply), getOffset = update_id current }
   run
 
 main :: IO ()
@@ -69,3 +68,7 @@ main = do
   initial <- fetchJSON (getUpdates 0 token) manager
   let offset = fromMaybe 0 $ fmap update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT run (bot { getOffset = offset })
+-}
+
+main :: IO ()
+main = undefined
