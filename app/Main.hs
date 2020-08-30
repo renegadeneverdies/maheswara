@@ -23,7 +23,7 @@ fetchJSON :: Request -> Manager -> IO L8.ByteString
 fetchJSON req man = do
   response <- httpLbs req man
   return (responseBody response)
-{-
+
 run :: StateT Bot IO ()
 run = do
   bot <- get
@@ -34,18 +34,19 @@ run = do
       manager = getManager bot
       token = getToken bot
       offset = getOffset bot
-  unless (action == Await) (replicateM_ (getRepeat' action) (lift (httpLbs (sendMessage token (getEcho action)) manager))
+  unless (action == Await) (replicateM_ (getRepeat' action) (lift (httpLbs (getEcho action) manager))
                              >> put (bot { getAction = Await, getOffset = offset + 1 })
                              >> run)
   upds <- lift $ fetchJSON (getUpdates offset token) manager
   let list = parseMaybe updates =<< decode upds
   when (list == Just []) (put (bot { getAction = Await }) >> run)
-  let current = head (fromJust list)
-      content = getContent (message current)
-      chatId = (_id (chat $ message current))
-      newReply = fromMaybe (1, mempty) (setReply chatId bot content)-- SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
-  lift $ print (snd newReply)
-  put bot { getAction = Echo (snd newReply) (fst newReply), getOffset = update_id current }
+  let currentUpd = head (fromJust list)
+      currentMsg = message currentUpd
+      chatId = (_id (chat $ currentMsg))
+      (newBot, newReq) = fromJust $ sendReply bot chatId mempty currentMsg 
+      repeats = fromMaybe 1 (Map.lookup chatId (getUsers newBot))
+  lift $ print newReq
+  put newBot { getAction = Echo newReq repeats, getOffset = update_id currentUpd }
   run
 
 main :: IO ()
@@ -59,8 +60,8 @@ main = do
       repeat = T.pack (init repeat')
       bot = Bot { getUsers = Map.empty
                 , getAction = Await
-                , getHelp = help
-                , getRepeat = repeat
+                , getHelp = T.unpack help
+                , getRepeat = T.unpack repeat
                 , getManager = manager
                 , getToken = token
                 , getOffset = 0
@@ -68,7 +69,3 @@ main = do
   initial <- fetchJSON (getUpdates 0 token) manager
   let offset = fromMaybe 0 $ fmap update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT run (bot { getOffset = offset })
--}
-
-main :: IO ()
-main = undefined
