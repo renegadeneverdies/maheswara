@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
-{-# LANGUAGE RecordWildCards #-}
 module Entities ( User(..)
                 , Message(..)
                 , Media (..)
@@ -71,7 +70,7 @@ data Update = Update
 type Updates = [Update]
 
 updates :: Value -> Parser Updates
-updates = withObject "updates" $ \o -> o .: (T.pack "result")
+updates = withObject "updates" $ \o -> o .: T.pack "result"
 
 data Action = Await | Echo { getEcho :: Request, getRepeat' :: Repeat } deriving Show
 
@@ -86,7 +85,7 @@ type Repeat = Int
 type Token = String
 
 data Bot = Bot
-         { getUsers :: (Map UserId Repeat)
+         { getUsers :: Map UserId Repeat
          , getAction :: Action
          , getHelp :: T.Text
          , getRepeat :: T.Text
@@ -96,14 +95,14 @@ data Bot = Bot
          , getDefault :: Repeat
          }
 
-data KeyboardMarkup = KeyboardMarkup
+newtype KeyboardMarkup = KeyboardMarkup
                     { keyboard :: [[KeyboardButton]] } deriving (Show, Eq, ToJSON, FromJSON, Generic)
 
-data KeyboardButton = KeyboardButton
+newtype KeyboardButton = KeyboardButton
                     { _text :: T.Text } deriving (Show, Eq, Generic)
 
 defaultKeyboard :: KeyboardMarkup
-defaultKeyboard = KeyboardMarkup $ [fmap KeyboardButton (T.pack <$> ["/1", "/2", "/3", "/4", "/5"])]
+defaultKeyboard = KeyboardMarkup [fmap KeyboardButton (T.pack <$> ["/1", "/2", "/3", "/4", "/5"])]
 
 instance FromJSON KeyboardButton where
   parseJSON = genericParseJSON defaultOptions {

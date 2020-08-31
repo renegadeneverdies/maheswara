@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 module Main where
 import Data.Aeson
 import Data.Aeson.Types
@@ -36,10 +35,10 @@ run = do
                              >> run)
   upds <- lift $ fetchJSON (getUpdates offset token) manager
   let list = parseMaybe updates =<< decode upds
-  when (list == Just [] || list == Nothing) (put (bot { getAction = Await }) >> run)
+  when (list == Just [] || isNothing list) (put (bot { getAction = Await }) >> run)
   let currentUpd = head (fromJust list)
       currentMsg = message currentUpd
-      chatId = _id (chat $ currentMsg)
+      chatId = _id (chat currentMsg)
       (newBot, newReq) = fromJust $ sendReply bot chatId mempty currentMsg
       repeats = fromMaybe defaultRepeat (Map.lookup chatId $ getUsers newBot)
   --lift $ print newReq
@@ -67,5 +66,5 @@ main = do
                 , getDefault = defaultRepeat
                 }
   initial <- fetchJSON (getUpdates 0 token) manager
-  let offset = fromMaybe 0 $ fmap update_id (getLast (parseMaybe updates =<< decode initial))
+  let offset = maybe 0 update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT run (bot { getOffset = offset })

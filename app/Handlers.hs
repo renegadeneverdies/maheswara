@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns#-}
 module Handlers where
 import Entities
@@ -17,7 +16,7 @@ tu :: T.Text -> String
 tu = T.unpack
 
 getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> (show offset))
+getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> show offset)
 
 getLast :: Maybe Updates -> Maybe Update
 getLast Nothing = Nothing
@@ -30,25 +29,25 @@ safeHead a = Just $ head a
 
 sendReply :: Bot -> Integer -> Maybe String -> Message -> Maybe (Bot, Request)
 sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> sticker' <|> video' <|> voice'
-  where message' = (sendMessage bot chatId Nothing) <$> (text msg)
-        audio' = (sendAudio bot chatId (caption msg)) <$> (audio msg)
-        document' = (sendDocument bot chatId (caption msg)) <$> (document msg)
-        photo' = (sendPhoto bot chatId (caption msg)) <$> (photo msg)
-        sticker' = (sendSticker bot chatId (caption msg)) <$> (sticker msg)
-        video' = (sendVideo bot chatId (caption msg)) <$> (video msg)
-        voice' = (sendVoice bot chatId (caption msg)) <$> (voice msg)
+  where message' = sendMessage bot chatId Nothing <$> text msg
+        audio' = sendAudio bot chatId (caption msg) <$> audio msg
+        document' = sendDocument bot chatId (caption msg) <$> document msg
+        photo' = sendPhoto bot chatId (caption msg) <$> photo msg
+        sticker' = sendSticker bot chatId (caption msg) <$> sticker msg
+        video' = sendVideo bot chatId (caption msg) <$> video msg
+        voice' = sendVoice bot chatId (caption msg) <$> voice msg
 
 sendMessage :: Bot -> Integer -> Maybe T.Text -> T.Text -> (Bot, Request)
 sendMessage bot chatId _ x
   | (tu -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                      , "text" .= (getHelp bot) ] })
+                                                                                      , "text" .= getHelp bot ] })
   | (tu -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                        , "text" .= (getRepeat bot)
+                                                                                        , "text" .= getRepeat bot
                                                                                         , "reply_markup" .= defaultKeyboard ] })
   | x' <- x = case T.uncons x' of
                 Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ tu xs) (getUsers bot) }
                                   , req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                         , "text" .= ((tp "Reply count set to") <> xs) ] })
+                                                                                         , "text" .= (tp "Reply count set to" <> xs) ] })
                 Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                              , "text" .= x ] })
                 Nothing        -> (bot, req)
