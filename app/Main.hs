@@ -1,16 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 module Main where
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Text as T
 import qualified Data.ByteString.Lazy.Char8 as L8
-import qualified Data.ByteString.Char8 as B8
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 
 import Prelude hiding (repeat)
-import System.IO
+import System.IO ()
 import qualified Data.Map as Map
 import Control.Monad
 import Control.Monad.State
@@ -27,26 +25,24 @@ fetchJSON req man = do
 run :: StateT Bot IO ()
 run = do
   bot <- get
-  let users = getUsers bot
-      action = getAction bot
-      help = getHelp bot
-      repeat = getRepeat bot
+  let action = getAction bot
       manager = getManager bot
       token = getToken bot
       offset = getOffset bot
-  unless (action == Await) (replicateM_ (getRepeat' action) (lift (httpLbs (sendMessage token (getEcho action)) manager))
+      defaultRepeat = getDefault bot
+  unless (action == Await) (replicateM_ (getRepeat' action) (lift $ httpLbs (getEcho action) manager)
                              >> put (bot { getAction = Await, getOffset = offset + 1 })
                              >> run)
   upds <- lift $ fetchJSON (getUpdates offset token) manager
   let list = parseMaybe updates =<< decode upds
-  when (list == Just []) (put (bot { getAction = Await }) >> run)
-  let current = head (fromJust list)
-      content = getContent (message current)
-      chatId = (_id (chat $ message current))
-      newReply = fromMaybe (1, mempty) (setReply chatId bot content)-- SMessage { chat_id' = _id (chat $ message current), text' = fromJust content }
-      newRepeat = fst newReply
-  lift $ print (snd newReply)
-  put bot { getAction = Echo (snd newReply) newRepeat, getOffset = update_id current }
+  when (list == Just [] || isNothing list) (put (bot { getAction = Await }) >> run)
+  let currentUpd = head (fromJust list)
+      currentMsg = message currentUpd
+      chatId = _id (chat currentMsg)
+      (newBot, newReq) = fromJust $ sendReply bot chatId mempty currentMsg
+      repeats = fromMaybe defaultRepeat (Map.lookup chatId $ getUsers newBot)
+  --lift $ print newReq
+  put newBot { getAction = Echo newReq repeats, getOffset = update_id currentUpd }
   run
 
 main :: IO ()
@@ -55,9 +51,11 @@ main = do
   token' <- readFile "token"
   help' <- readFile "help"
   repeat' <- readFile "repeat"
+  defaultRepeat' <- readFile "defaultRepeat"
   let token = init token'
       help = T.pack (init help')
       repeat = T.pack (init repeat')
+      defaultRepeat = read (init defaultRepeat') :: Repeat
       bot = Bot { getUsers = Map.empty
                 , getAction = Await
                 , getHelp = help
@@ -65,7 +63,8 @@ main = do
                 , getManager = manager
                 , getToken = token
                 , getOffset = 0
+                , getDefault = defaultRepeat
                 }
   initial <- fetchJSON (getUpdates 0 token) manager
-  let offset = fromMaybe 0 $ fmap update_id (getLast (parseMaybe updates =<< decode initial))
+  let offset = maybe 0 update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT run (bot { getOffset = offset })
