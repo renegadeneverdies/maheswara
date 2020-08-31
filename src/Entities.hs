@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
-{-# LANGUAGE DuplicateRecordFields, RecordWildCards #-}
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 module Entities ( User(..)
                 , Message(..)
                 , Media (..)
-                , SText (..)
                 , Action (..)
                 , Bot (..)
                 , Chat (..)
@@ -13,17 +11,17 @@ module Entities ( User(..)
                 , KeyboardMarkup(..), KeyboardButton(..), defaultKeyboard
                 , UserId, Offset, Token, Repeat) where
 
-import Data.Maybe (fromMaybe)
 import Data.Aeson
 import Data.Aeson.Types
 import GHC.Generics
 import Data.Map hiding (drop, take)
-import Network.HTTP.Client
+import Network.HTTP.Client (Request, Manager)
+import qualified Data.Text as T
 
 data User = User
           { id' :: Integer
           , is_bot' :: Bool
-          , first_name' :: String
+          , first_name' :: T.Text
           } deriving (Show, Generic, Eq)
 
 instance FromJSON User where
@@ -39,39 +37,23 @@ data Message = Message
               , from :: User
               , date :: Integer
               , chat :: Chat
-              , text :: Maybe SText
+              , text :: Maybe T.Text
               , audio :: Maybe Media
               , document :: Maybe Media
               , photo :: Maybe [Media]
               , sticker :: Maybe Media
               , video :: Maybe Media
               , voice :: Maybe Media
-              , caption :: Maybe String
+              , caption :: Maybe T.Text
               } deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
-newtype SText = SText { _text :: String } deriving (Show, Generic, Eq, Semigroup, Monoid)
-instance FromJSON SText where
-  parseJSON = withObject "text" $ \o -> do
-    _text <- o .: "text"
-    return SText{..}
-
-instance ToJSON SText where
-  toJSON SText{..} = object [ "text" .= _text ]
-
-newtype Media = Media { file_id :: String } deriving (Show, Generic, Eq, Semigroup, Monoid)
-instance FromJSON Media where
-  parseJSON = withObject "audio" $ \o -> do
-    file_id <- o .: "file_id"
-    return Media{..}
-
-instance ToJSON Media where
-  toJSON Media{..} = object [ "file_id" .= file_id ]
+newtype Media = Media { file_id :: T.Text } deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data Chat = Chat
           { _id :: Integer
           , _type :: String
-          , _first_name :: String
-          } deriving (Show, Generic, Eq, Semigroup)
+          , _first_name :: T.Text
+          } deriving (Show, Generic, Eq)
 
 instance FromJSON Chat where
   parseJSON = genericParseJSON defaultOptions {
@@ -89,7 +71,7 @@ data Update = Update
 type Updates = [Update]
 
 updates :: Value -> Parser Updates
-updates = withObject "updates" $ \o -> o .: (tp "result")
+updates = withObject "updates" $ \o -> o .: (T.pack "result")
 
 data Action = Await | Echo { getEcho :: Request, getRepeat' :: Repeat } deriving Show
 
@@ -106,21 +88,22 @@ type Token = String
 data Bot = Bot
          { getUsers :: (Map UserId Repeat)
          , getAction :: Action
-         , getHelp :: String
-         , getRepeat :: String
+         , getHelp :: T.Text
+         , getRepeat :: T.Text
          , getManager :: Manager
          , getToken :: Token
          , getOffset :: Offset
+         , getDefault :: Repeat
          }
 
 data KeyboardMarkup = KeyboardMarkup
                     { keyboard :: [[KeyboardButton]] } deriving (Show, Eq, ToJSON, FromJSON, Generic)
 
 data KeyboardButton = KeyboardButton
-                    { _text :: String} deriving (Show, Eq, Generic)
+                    { _text :: T.Text } deriving (Show, Eq, Generic)
 
 defaultKeyboard :: KeyboardMarkup
-defaultKeyboard = KeyboardMarkup $ [fmap KeyboardButton ["/1", "/2", "/3", "/4", "/5"]]
+defaultKeyboard = KeyboardMarkup $ [fmap KeyboardButton (T.pack <$> ["/1", "/2", "/3", "/4", "/5"])]
 
 instance FromJSON KeyboardButton where
   parseJSON = genericParseJSON defaultOptions {

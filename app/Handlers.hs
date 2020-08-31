@@ -1,22 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns#-}
 module Handlers where
 import Entities
 import qualified Data.Text as T
-import qualified Data.ByteString.Lazy.Char8 as L8
-import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy.Char8 as L8 ()
 import Network.HTTP.Client
-import Network.HTTP.Client.TLS
-import Data.Monoid ((<>))
-import Data.Maybe (fromMaybe)
+import Network.HTTP.Client.TLS ()
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Map as Map
+
+tp :: String -> T.Text
+tp = T.pack
+tu :: T.Text -> String
+tu = T.unpack
 
 getUpdates :: Offset -> String -> Request
 getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> (show offset))
 
 getLast :: Maybe Updates -> Maybe Update
+getLast Nothing = Nothing
 getLast (Just []) = Nothing
 getLast (Just x) = Just (last x)
 
@@ -26,7 +30,7 @@ safeHead a = Just $ head a
 
 sendReply :: Bot -> Integer -> Maybe String -> Message -> Maybe (Bot, Request)
 sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> sticker' <|> video' <|> voice'
-  where message' = (sendMessage bot chatId mempty) <$> (text msg)
+  where message' = (sendMessage bot chatId Nothing) <$> (text msg)
         audio' = (sendAudio bot chatId (caption msg)) <$> (audio msg)
         document' = (sendDocument bot chatId (caption msg)) <$> (document msg)
         photo' = (sendPhoto bot chatId (caption msg)) <$> (photo msg)
@@ -34,37 +38,78 @@ sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> st
         video' = (sendVideo bot chatId (caption msg)) <$> (video msg)
         voice' = (sendVoice bot chatId (caption msg)) <$> (voice msg)
 
-sendMessage :: Bot -> Integer -> Maybe String -> SText -> (Bot, Request)
-sendMessage bot chatId _ (SText "/help") = (,) bot $ parseRequest_ ((getToken bot) <> "sendMessage?chat_id=" <> (show chatId)
-                                                <> "&text=" <> (getHelp bot))
-sendMessage bot chatId _ (SText "/repeat") = (,) bot $ parseRequest_ ((getToken bot) <> "sendMessage?chat_id=" <> (show chatId)
-                                                <> "&text=" <> (getRepeat bot))
-sendMessage bot chatId _ (SText ('/':x)) = (,) (bot { getUsers = Map.insert chatId (read x) (getUsers bot)}) $
-                                     parseRequest_ ((getToken bot) <> "sendMessage?chat_id=" <> (show chatId)
-                                                <> "&text=" <> "Reply count set to " <> x)
-sendMessage bot chatId _ (SText x) = (,) bot $ parseRequest_ ((getToken bot) <> "sendMessage?chat_id=" <> (show chatId)
-                                                <> "&text=" <> x)
+sendMessage :: Bot -> Integer -> Maybe T.Text -> T.Text -> (Bot, Request)
+sendMessage bot chatId _ x
+  | (tu -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                      , "text" .= (getHelp bot) ] })
+  | (tu -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                        , "text" .= (getRepeat bot)
+                                                                                        , "reply_markup" .= defaultKeyboard ] })
+  | x' <- x = case T.uncons x' of
+                Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ tu xs) (getUsers bot) }
+                                  , req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                         , "text" .= ((tp "Reply count set to") <> xs) ] })
+                Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                             , "text" .= x ] })
+                Nothing        -> (bot, req)
+  where req = request' (getToken bot) "sendMessage"
 
-sendAudio :: Bot -> Integer -> Maybe String -> Media -> (Bot, Request)
-sendAudio bot chatId caption audio = (,) bot $ parseRequest_ ((getToken bot) <> "sendAudio?chat_id=" <> (show chatId)
-                                             <> "&audio=" <> (file_id audio) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendAudio :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
+sendAudio bot chatId caption (file_id -> audio)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "audio" .= audio
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "audio" .= audio ] })
+  where req = request' (getToken bot) "sendAudio"
 
-sendDocument :: Bot -> Integer -> Maybe String -> Media -> (Bot, Request)
-sendDocument bot chatId caption document = (,) bot $ parseRequest_ ((getToken bot) <> "sendDocument?chat_id=" <> (show chatId)
-                                                <> "&document=" <> (file_id document) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendDocument :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
+sendDocument bot chatId caption (file_id -> document)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "document" .= document
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "document" .= document ] })
+  where req = request' (getToken bot) "sendDocument"
 
-sendPhoto :: Bot -> Integer -> Maybe String -> [Media] -> (Bot, Request)
-sendPhoto bot chatId caption (x:_) = (,) bot $ parseRequest_ ((getToken bot) <> "sendPhoto?chat_id=" <> (show chatId)
-                                             <> "&photo=" <> (file_id x) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendPhoto :: Bot -> Integer -> Maybe T.Text -> [Media] -> (Bot, Request)
+sendPhoto bot chatId caption (file_id . head -> photo)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "photo" .= photo
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "photo" .= photo ] })
+  where req = request' (getToken bot) "sendPhoto"
 
-sendSticker :: Bot -> Integer -> Maybe String -> Media -> (Bot, Request)
-sendSticker bot chatId caption sticker = (,) bot $ parseRequest_ ((getToken bot) <> "sendSticker?chat_id=" <> (show chatId)
-                                               <> "&sticker=" <> (file_id sticker) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendSticker :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
+sendSticker bot chatId caption (file_id -> sticker)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "sticker" .= sticker
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "sticker" .= sticker ] })
+  where req = request' (getToken bot) "sendSticker"
 
-sendVideo :: Bot -> Integer -> Maybe String -> Media -> (Bot, Request)
-sendVideo bot chatId caption video = (,) bot $ parseRequest_ ((getToken bot) <> "sendVideo?chat_id=" <> (show chatId)
-                                             <> "&video=" <> (file_id video) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendVideo :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
+sendVideo bot chatId caption (file_id -> video)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "video" .= video
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "video" .= video ] })
+  where req = request' (getToken bot) "sendVideo"
 
-sendVoice :: Bot -> Integer -> Maybe String -> Media -> (Bot, Request)
-sendVoice bot chatId caption voice = (,) bot $ parseRequest_ ((getToken bot) <> "sendVoice?chat_id=" <> (show chatId)
-                                             <> "&voice=" <> (file_id voice) <> (fromMaybe mempty (Just "&caption=" <> caption)))
+sendVoice :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
+sendVoice bot chatId caption (file_id -> voice)
+  | (Just cap) <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                       , "voice" .= voice
+                                                                                       , "caption" .= cap ] })
+  | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+                                                                                    , "voice" .= voice ] })
+  where req = request' (getToken bot) "sendVoice"
+
+request' :: Token -> String -> Request
+request' token path =
+  (parseRequest_ $ token <> path) {
+   method = "POST",
+   requestHeaders = [("Content-Type", "application/json; charset=utf-8")] }
