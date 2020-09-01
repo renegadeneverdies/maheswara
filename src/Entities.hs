@@ -6,6 +6,7 @@ module Entities ( User(..)
                 , Action (..)
                 , Bot (..)
                 , Chat (..)
+                , Config (..), buildConfig
                 , Update (..), Updates, updates
                 , KeyboardMarkup(..), KeyboardButton(..), defaultKeyboard
                 , UserId, Offset, Token, Repeat) where
@@ -87,13 +88,29 @@ type Token = String
 data Bot = Bot
          { getUsers :: Map UserId Repeat
          , getAction :: Action
-         , getHelp :: T.Text
-         , getRepeat :: T.Text
+         , getConfig :: Config
          , getManager :: Manager
-         , getToken :: Token
          , getOffset :: Offset
-         , getDefault :: Repeat
          }
+
+data Config = Config
+            { getTokenTG :: Token
+            , getTokenVK :: Token
+            , getLogLevel :: String -- logger data will be implemented later
+            , getHelp :: T.Text
+            , getRepeat :: T.Text
+            , getDefault :: Repeat
+            }
+
+buildConfig :: [(T.Text, T.Text)] -> Config
+buildConfig [] = Config mempty mempty mempty mempty mempty 1
+buildConfig ((a, b):xs) | a == T.pack "tokenTG" = (buildConfig xs) { getTokenTG = T.unpack b }
+                        | a == T.pack "tokenVK" = (buildConfig xs) { getTokenVK = T.unpack b }
+                        | a == T.pack "logLevel" = (buildConfig xs) { getLogLevel = T.unpack b }
+                        | a == T.pack "helpMessage" = (buildConfig xs) { getHelp = b }
+                        | a == T.pack "repeatMessage" = (buildConfig xs) { getRepeat = b }
+                        | a == T.pack "defaultRepeat" = (buildConfig xs) { getDefault = read (T.unpack b) :: Repeat }
+                        | otherwise = Config mempty mempty mempty mempty mempty 1
 
 newtype KeyboardMarkup = KeyboardMarkup
                     { keyboard :: [[KeyboardButton]] } deriving (Show, Eq, ToJSON, FromJSON, Generic)
