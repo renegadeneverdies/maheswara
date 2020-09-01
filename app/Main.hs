@@ -48,7 +48,7 @@ run = do
 main :: IO ()
 main = do
   manager <- newManager tlsManagerSettings
-  file <- T.splitOn (T.pack ";") . T.pack <$> readFile "../maheswara.config"
+  file <- T.splitOn (T.pack ";") . T.pack <$> readFile "config/maheswara.config"
   let config = buildConfig $ fmap (T.drop 1) . T.breakOn (T.pack "=") . T.strip <$> file
       bot = Bot { getUsers = Map.empty
                 , getAction = Await
