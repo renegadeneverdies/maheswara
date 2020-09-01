@@ -12,7 +12,7 @@ import System.IO ()
 import qualified Data.Map as Map
 import Control.Monad
 import Control.Monad.State
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, isNothing)
 
 import Entities
 import Handlers
@@ -27,9 +27,9 @@ run = do
   bot <- get
   let action = getAction bot
       manager = getManager bot
-      token = getToken bot
+      token = getTokenTG (getConfig bot)
       offset = getOffset bot
-      defaultRepeat = getDefault bot
+      defaultRepeat = getDefault (getConfig bot)
   unless (action == Await) (replicateM_ (getRepeat' action) (lift $ httpLbs (getEcho action) manager)
                              >> put (bot { getAction = Await, getOffset = offset + 1 })
                              >> run)
@@ -48,23 +48,14 @@ run = do
 main :: IO ()
 main = do
   manager <- newManager tlsManagerSettings
-  token' <- readFile "token"
-  help' <- readFile "help"
-  repeat' <- readFile "repeat"
-  defaultRepeat' <- readFile "defaultRepeat"
-  let token = init token'
-      help = T.pack (init help')
-      repeat = T.pack (init repeat')
-      defaultRepeat = read (init defaultRepeat') :: Repeat
+  file <- T.splitOn (T.pack ";") . T.pack <$> readFile "../maheswara.config"
+  let config = buildConfig $ fmap (T.drop 1) . T.breakOn (T.pack "=") . T.strip <$> file
       bot = Bot { getUsers = Map.empty
                 , getAction = Await
-                , getHelp = help
-                , getRepeat = repeat
                 , getManager = manager
-                , getToken = token
                 , getOffset = 0
-                , getDefault = defaultRepeat
+                , getConfig = config
                 }
-  initial <- fetchJSON (getUpdates 0 token) manager
+  initial <- fetchJSON (getUpdates 0 (getTokenTG config)) manager
   let offset = maybe 0 update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT run (bot { getOffset = offset })

@@ -16,7 +16,7 @@ tu :: T.Text -> String
 tu = T.unpack
 
 getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "getUpdates?timeout=5&offset=" <> show offset)
+getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=5&offset=" <> show offset)
 
 getLast :: Maybe Updates -> Maybe Update
 getLast Nothing = Nothing
@@ -40,9 +40,9 @@ sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> st
 sendMessage :: Bot -> Integer -> Maybe T.Text -> T.Text -> (Bot, Request)
 sendMessage bot chatId _ x
   | (tu -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                      , "text" .= getHelp bot ] })
+                                                                                      , "text" .= getHelp (getConfig bot) ] })
   | (tu -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                        , "text" .= getRepeat bot
+                                                                                        , "text" .= getRepeat (getConfig bot)
                                                                                         , "reply_markup" .= defaultKeyboard ] })
   | x' <- x = case T.uncons x' of
                 Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ tu xs) (getUsers bot) }
@@ -51,7 +51,7 @@ sendMessage bot chatId _ x
                 Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                              , "text" .= x ] })
                 Nothing        -> (bot, req)
-  where req = request' (getToken bot) "sendMessage"
+  where req = request' (getTokenTG (getConfig bot)) "/sendMessage"
 
 sendAudio :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
 sendAudio bot chatId caption (file_id -> audio)
@@ -60,7 +60,7 @@ sendAudio bot chatId caption (file_id -> audio)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "audio" .= audio ] })
-  where req = request' (getToken bot) "sendAudio"
+  where req = request' (getTokenTG (getConfig bot)) "/sendAudio"
 
 sendDocument :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
 sendDocument bot chatId caption (file_id -> document)
@@ -69,7 +69,7 @@ sendDocument bot chatId caption (file_id -> document)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "document" .= document ] })
-  where req = request' (getToken bot) "sendDocument"
+  where req = request' (getTokenTG (getConfig bot)) "/sendDocument"
 
 sendPhoto :: Bot -> Integer -> Maybe T.Text -> [Media] -> (Bot, Request)
 sendPhoto bot chatId caption (file_id . head -> photo)
@@ -78,7 +78,7 @@ sendPhoto bot chatId caption (file_id . head -> photo)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "photo" .= photo ] })
-  where req = request' (getToken bot) "sendPhoto"
+  where req = request' (getTokenTG (getConfig bot)) "/sendPhoto"
 
 sendSticker :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
 sendSticker bot chatId caption (file_id -> sticker)
@@ -87,7 +87,7 @@ sendSticker bot chatId caption (file_id -> sticker)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "sticker" .= sticker ] })
-  where req = request' (getToken bot) "sendSticker"
+  where req = request' (getTokenTG (getConfig bot)) "/sendSticker"
 
 sendVideo :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
 sendVideo bot chatId caption (file_id -> video)
@@ -96,7 +96,7 @@ sendVideo bot chatId caption (file_id -> video)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "video" .= video ] })
-  where req = request' (getToken bot) "sendVideo"
+  where req = request' (getTokenTG (getConfig bot)) "/sendVideo"
 
 sendVoice :: Bot -> Integer -> Maybe T.Text -> Media -> (Bot, Request)
 sendVoice bot chatId caption (file_id -> voice)
@@ -105,7 +105,7 @@ sendVoice bot chatId caption (file_id -> voice)
                                                                                        , "caption" .= cap ] })
   | Nothing <- caption = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                     , "voice" .= voice ] })
-  where req = request' (getToken bot) "sendVoice"
+  where req = request' (getTokenTG (getConfig bot)) "/sendVoice"
 
 request' :: Token -> String -> Request
 request' token path =
