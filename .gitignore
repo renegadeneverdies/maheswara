@@ -1,6 +1,5 @@
 .stack-work/
-./app/token
 .vscode
 .history
 report.html
-maheswara.config
+config/maheswara.config
