@@ -16,7 +16,7 @@ getLast (Just []) = Nothing
 getLast (Just x) = Just (last x)
 
 getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=5&offset=" <> show offset)
+getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=10&offset=" <> show offset)
 
 sendReply :: Bot -> Integer -> Maybe String -> Message -> Maybe (Bot, Request)
 sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> sticker' <|> video' <|> voice'

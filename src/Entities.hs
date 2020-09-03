@@ -8,7 +8,7 @@ module Entities ( User(..)
                 , Chat (..)
                 , Config (..), buildConfig
                 , Update (..), Updates, updates
-                , writeLog, LogLevel(..)
+                , LogLevel(..)
                 , KeyboardMarkup(..), KeyboardButton(..), defaultKeyboard
                 , UserId, Offset, Token, Repeat) where
 
@@ -104,22 +104,18 @@ data Config = Config
             }
 
 buildConfig :: [(T.Text, T.Text)] -> Config
-buildConfig [] = Config mempty mempty ALL mempty mempty 1
+buildConfig [] = Config mempty mempty DEBUG mempty mempty 1
 buildConfig ((a, b):xs) | a == T.pack "tokenTG" = (buildConfig xs) { getTokenTG = T.unpack b }
                         | a == T.pack "tokenVK" = (buildConfig xs) { getTokenVK = T.unpack b }
                         | a == T.pack "logLevel" = (buildConfig xs) { getLogLevel = read $ T.unpack b }
                         | a == T.pack "helpMessage" = (buildConfig xs) { getHelp = b }
                         | a == T.pack "repeatMessage" = (buildConfig xs) { getRepeat = b }
                         | a == T.pack "defaultRepeat" = (buildConfig xs) { getDefault = read (T.unpack b) :: Repeat }
-                        | otherwise = Config mempty mempty ALL mempty mempty 1
+                        | otherwise = Config mempty mempty DEBUG mempty mempty 1
 
-data LogLevel = DEBUG | WARN | ERROR  deriving (Show, Read, Eq, Ord)
+data LogLevel = DEBUG | WARNING | ERROR  deriving (Show, Read, Eq, Ord)
 
 --data BotError = InvalidToken String | BadResponse String | MaybeError String | Other String deriving (Show, Eq)
-
-writeLog :: String -> String -> LogLevel -> Config -> IO ()
-writeLog path str level cfg | level >= getLogLevel cfg = writeFile path (show level <> " " <> str)
-                            | otherwise = return ()
 
 newtype KeyboardMarkup = KeyboardMarkup
                     { keyboard :: [[KeyboardButton]] } deriving (Show, Eq, ToJSON, FromJSON, Generic)
