@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cc761d7eb693024263b4f7583287719599fc1ca1565a308c312272949ce55fab
+-- hash: a45d71fa4a47af4315086b8c55a71c812f4900c293a03f2184bdac83fee36aea
 
 name:           maheswara
 version:        0.1.0.0
@@ -41,6 +41,7 @@ library
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , mtl
     , text
     , time
@@ -63,6 +64,7 @@ executable maheswara-exe
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , maheswara
     , mtl
     , text
@@ -86,6 +88,7 @@ test-suite maheswara-test
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , maheswara
     , mtl
     , text

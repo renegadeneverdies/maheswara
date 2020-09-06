@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 module Main where
 import Data.Aeson
 import Data.Time
 import Data.Aeson.Types
 import qualified Data.Text as T
 import qualified Data.ByteString.Lazy.Char8 as L8
+import Network.HTTP.Types.Status
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 
@@ -35,21 +37,20 @@ run = do
       defaultRepeat = getDefault config
   unless (action == Await) (let repeat' = getRepeat' action
                                 echo = getEcho action
-                             in replicateM_ repeat' (lift $ httpLbs echo manager)
-                               >> lift (writeLog time logFile (show repeat' <> "x " <> show echo) DEBUG config)
+                             in replicateM repeat' (lift $ httpLbs echo manager)
+                               >>= (\(last -> x) -> lift (writeLog time logFile (show (responseStatus x, parseMaybe response' =<< decode (responseBody x))) DEBUG config))
                                >> put (bot { getAction = Await, getOffset = offset + 1 })
                                >> run)
   upds <- lift $ fetchJSON (getUpdates offset token) manager
   let list = parseMaybe updates =<< decode upds
   when (list == Just [] || isNothing list) (put (bot { getAction = Await })
-                                             >> lift (writeLog time logFile " Update list is empty " DEBUG config)
+                                             >> lift (writeLog time logFile "Update list is empty " DEBUG config)
                                              >> run)
   let currentUpd = head (fromJust list)
       currentMsg = message currentUpd
       chatId = _id (chat currentMsg)
       (newBot, newReq) = fromJust $ sendReply bot chatId mempty currentMsg
       repeats = fromMaybe defaultRepeat (Map.lookup chatId $ getUsers newBot)
-  --lift $ print newReq
   put newBot { getAction = Echo newReq repeats, getOffset = update_id currentUpd }
   run
 
@@ -65,9 +66,9 @@ main = do
                 , getOffset = 0
                 , getConfig = config
                 }
+  writeLog time logFile "Bot started " DEBUG config
   initial <- fetchJSON (getUpdates 0 (getTokenTG config)) manager
   let offset = maybe 0 update_id (getLast (parseMaybe updates =<< decode initial))
-  writeLog time logFile " Bot started " DEBUG config
   evalStateT run (bot { getOffset = offset })
 
 

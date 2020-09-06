@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 module Entities ( User(..)
-                , Message(..)
+                , Message(..), response'
                 , Media (..)
                 , Action (..)
                 , Bot (..)
@@ -73,6 +73,9 @@ type Updates = [Update]
 
 updates :: Value -> Parser Updates
 updates = withObject "updates" $ \o -> o .: T.pack "result"
+
+response' :: Value -> Parser Message
+response' = withObject "response" $ \o -> o .: T.pack "result"
 
 data Action = Await | Echo { getEcho :: Request, getRepeat' :: Repeat } deriving Show
 
