@@ -1,13 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass, DeriveGeneric #-}
 module Entities ( User(..)
-                , Message(..)
+                , Message(..), response'
                 , Media (..)
                 , Action (..)
                 , Bot (..)
                 , Chat (..)
                 , Config (..), buildConfig
                 , Update (..), Updates, updates
+                , LogLevel(..)
                 , KeyboardMarkup(..), KeyboardButton(..), defaultKeyboard
                 , UserId, Offset, Token, Repeat) where
 
@@ -15,7 +16,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import GHC.Generics
 import Data.Map hiding (drop, take)
-import Network.HTTP.Client (Request, Manager)
+import Network.HTTP.Client (Request, Manager, Response)
 import qualified Data.Text as T
 
 data User = User
@@ -73,6 +74,9 @@ type Updates = [Update]
 updates :: Value -> Parser Updates
 updates = withObject "updates" $ \o -> o .: T.pack "result"
 
+response' :: Value -> Parser Message
+response' = withObject "response" $ \o -> o .: T.pack "result"
+
 data Action = Await | Echo { getEcho :: Request, getRepeat' :: Repeat } deriving Show
 
 instance Eq Action where
@@ -96,21 +100,25 @@ data Bot = Bot
 data Config = Config
             { getTokenTG :: Token
             , getTokenVK :: Token
-            , getLogLevel :: String -- logger data will be implemented later
+            , getLogLevel :: LogLevel
             , getHelp :: T.Text
             , getRepeat :: T.Text
             , getDefault :: Repeat
             }
 
 buildConfig :: [(T.Text, T.Text)] -> Config
-buildConfig [] = Config mempty mempty mempty mempty mempty 1
+buildConfig [] = Config mempty mempty DEBUG mempty mempty 1
 buildConfig ((a, b):xs) | a == T.pack "tokenTG" = (buildConfig xs) { getTokenTG = T.unpack b }
                         | a == T.pack "tokenVK" = (buildConfig xs) { getTokenVK = T.unpack b }
-                        | a == T.pack "logLevel" = (buildConfig xs) { getLogLevel = T.unpack b }
+                        | a == T.pack "logLevel" = (buildConfig xs) { getLogLevel = read $ T.unpack b }
                         | a == T.pack "helpMessage" = (buildConfig xs) { getHelp = b }
                         | a == T.pack "repeatMessage" = (buildConfig xs) { getRepeat = b }
                         | a == T.pack "defaultRepeat" = (buildConfig xs) { getDefault = read (T.unpack b) :: Repeat }
-                        | otherwise = Config mempty mempty mempty mempty mempty 1
+                        | otherwise = Config mempty mempty DEBUG mempty mempty 1
+
+data LogLevel = DEBUG | WARNING | ERROR  deriving (Show, Read, Eq, Ord)
+
+--data BotError = InvalidToken String | BadResponse String | MaybeError String | Other String deriving (Show, Eq)
 
 newtype KeyboardMarkup = KeyboardMarkup
                     { keyboard :: [[KeyboardButton]] } deriving (Show, Eq, ToJSON, FromJSON, Generic)

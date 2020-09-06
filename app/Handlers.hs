@@ -10,18 +10,13 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Map as Map
 
-tp :: String -> T.Text
-tp = T.pack
-tu :: T.Text -> String
-tu = T.unpack
-
-getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=5&offset=" <> show offset)
-
 getLast :: Maybe Updates -> Maybe Update
 getLast Nothing = Nothing
 getLast (Just []) = Nothing
 getLast (Just x) = Just (last x)
+
+getUpdates :: Offset -> String -> Request
+getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=10&offset=" <> show offset)
 
 sendReply :: Bot -> Integer -> Maybe String -> Message -> Maybe (Bot, Request)
 sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> sticker' <|> video' <|> voice'
@@ -35,15 +30,15 @@ sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> st
 
 sendMessage :: Bot -> Integer -> Maybe T.Text -> T.Text -> (Bot, Request)
 sendMessage bot chatId _ x
-  | (tu -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+  | (T.unpack -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                       , "text" .= getHelp (getConfig bot) ] })
-  | (tu -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
+  | (T.unpack -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                         , "text" .= getRepeat (getConfig bot)
                                                                                         , "reply_markup" .= defaultKeyboard ] })
   | x' <- x = case T.uncons x' of
-                Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ tu xs) (getUsers bot) }
+                Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ T.unpack xs) (getUsers bot) }
                                   , req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                         , "text" .= (tp "Reply count set to" <> xs) ] })
+                                                                                         , "text" .= (T.pack "Reply count set to" <> xs) ] })
                 Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
                                                                                              , "text" .= x ] })
                 Nothing        -> (bot, req)

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 10081e04c523361ac5eb33c2262ab34ffc891d34ed717a28d8023e0e5dfcff15
+-- hash: a45d71fa4a47af4315086b8c55a71c812f4900c293a03f2184bdac83fee36aea
 
 name:           maheswara
 version:        0.1.0.0
@@ -41,8 +41,10 @@ library
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , mtl
     , text
+    , time
     , yaml
   default-language: Haskell2010
 
@@ -62,9 +64,11 @@ executable maheswara-exe
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , maheswara
     , mtl
     , text
+    , time
     , yaml
   default-language: Haskell2010
 
@@ -84,8 +88,10 @@ test-suite maheswara-test
     , http-client
     , http-client-tls
     , http-conduit
+    , http-types
     , maheswara
     , mtl
     , text
+    , time
     , yaml
   default-language: Haskell2010

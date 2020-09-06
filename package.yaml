@@ -29,8 +29,9 @@ dependencies:
 - containers
 - yaml
 - text
+- time
 - mtl
-
+- http-types
 
 library:
   source-dirs: src
