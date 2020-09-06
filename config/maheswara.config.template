@@ -1,6 +1,6 @@
 tokenTG=https://api.telegram.org/bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11;
 tokenVK=;
-logLevel=OK;
+logLevel=DEBUG;
 helpMessage=Type /repeat to set reply count;
 repeatMessage=How many times would you like me to reply?;
 defaultRepeat=1;
