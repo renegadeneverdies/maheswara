@@ -32,6 +32,7 @@ dependencies:
 - time
 - mtl
 - http-types
+- hspec
 
 library:
   source-dirs: src

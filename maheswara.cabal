@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a45d71fa4a47af4315086b8c55a71c812f4900c293a03f2184bdac83fee36aea
+-- hash: 40bfc71013e84faade2e861df7a699534e0eae669ce48f2bd670e883bfdc4145
 
 name:           maheswara
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Entities
+      Handlers
       Lib
   other-modules:
       Paths_maheswara
@@ -38,6 +39,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
     , http-conduit
@@ -51,7 +53,6 @@ library
 executable maheswara-exe
   main-is: Main.hs
   other-modules:
-      Handlers
       Paths_maheswara
   hs-source-dirs:
       app
@@ -61,6 +62,7 @@ executable maheswara-exe
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
     , http-conduit
@@ -76,6 +78,7 @@ test-suite maheswara-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Samples
       Paths_maheswara
   hs-source-dirs:
       test
@@ -85,6 +88,7 @@ test-suite maheswara-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
     , http-conduit
