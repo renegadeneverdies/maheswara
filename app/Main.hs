@@ -20,10 +20,14 @@ import Data.Maybe (fromJust, fromMaybe, isNothing)
 import Entities
 import Handlers
 
-fetchJSON :: Request -> Manager -> IO L8.ByteString
-fetchJSON req man = do
+fetchJSON :: Maybe Request -> Manager -> IO L8.ByteString
+fetchJSON (Just req) man = do
   response <- httpLbs req man
   return (responseBody response)
+fetchJSON Nothing man    = do
+  response <- httpLbs fake man
+  return (responseBody response)
+  where fake = "https://api.telegram.org/bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11/getMe"
 
 run :: Manager -> StateT Bot IO ()
 run manager = do
@@ -43,14 +47,12 @@ run manager = do
   upds <- lift $ fetchJSON (getUpdates offset token) manager
   let list = parseMaybe updates =<< decode upds
   when (list == Just [] || isNothing list) (put (bot { getAction = Await })
-                                             >> lift (writeLog time logFile "Update list is empty " DEBUG config)
                                              >> run manager)
   let currentUpd = head (fromJust list)
       currentMsg = message currentUpd
       chatId = _id (chat currentMsg)
       (newBot, newReq) = fromJust $ sendReply bot chatId mempty currentMsg
       repeats = fromMaybe defaultRepeat (Map.lookup chatId $ getUsers newBot)
-  lift $ print (path newReq)
   put newBot { getAction = Echo newReq repeats, getOffset = update_id currentUpd }
   run manager
 
@@ -66,6 +68,8 @@ main = do
                 , getConfig = config
                 }
   writeLog time logFile "Bot started " DEBUG config
+  let upds = getUpdates 0 (getTokenTG config)
+  when (isNothing upds) (writeLog time logFile "Invalid token " ERROR config)
   initial <- fetchJSON (getUpdates 0 (getTokenTG config)) manager
   let offset = maybe 0 update_id (getLast (parseMaybe updates =<< decode initial))
   evalStateT (run manager) (bot { getOffset = offset })

@@ -22,12 +22,10 @@ description:         Please see the README on GitHub at <https://github.com/risc
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- http-conduit
 - http-client
 - http-client-tls
 - aeson
 - containers
-- yaml
 - text
 - time
 - mtl

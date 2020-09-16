@@ -19,6 +19,8 @@ import Data.Map hiding (drop, take)
 import Network.HTTP.Client (Request, Manager, Response)
 import qualified Data.Text as T
 
+data Messenger = VK | TG deriving (Show, Eq)
+
 data User = User
           { id' :: Integer
           , is_bot' :: Bool
