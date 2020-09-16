@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a45d71fa4a47af4315086b8c55a71c812f4900c293a03f2184bdac83fee36aea
+-- hash: 21b4b4296f9828241fda93c8bc771761c3d45c1e0c43ba52c21b8bd77f8b2513
 
 name:           maheswara
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Entities
+      Handlers
       Lib
   other-modules:
       Paths_maheswara
@@ -38,20 +39,18 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
-    , http-conduit
     , http-types
     , mtl
     , text
     , time
-    , yaml
   default-language: Haskell2010
 
 executable maheswara-exe
   main-is: Main.hs
   other-modules:
-      Handlers
       Paths_maheswara
   hs-source-dirs:
       app
@@ -61,21 +60,21 @@ executable maheswara-exe
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
-    , http-conduit
     , http-types
     , maheswara
     , mtl
     , text
     , time
-    , yaml
   default-language: Haskell2010
 
 test-suite maheswara-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Samples
       Paths_maheswara
   hs-source-dirs:
       test
@@ -85,13 +84,12 @@ test-suite maheswara-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , hspec
     , http-client
     , http-client-tls
-    , http-conduit
     , http-types
     , maheswara
     , mtl
     , text
     , time
-    , yaml
   default-language: Haskell2010

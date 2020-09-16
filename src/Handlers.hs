@@ -15,8 +15,8 @@ getLast Nothing = Nothing
 getLast (Just []) = Nothing
 getLast (Just x) = Just (last x)
 
-getUpdates :: Offset -> String -> Request
-getUpdates offset token = parseRequest_ (token <> "/getUpdates?timeout=10&offset=" <> show offset)
+getUpdates :: Offset -> String -> Maybe Request
+getUpdates offset token = parseRequest (token <> "/getUpdates?timeout=10&offset=" <> show offset)
 
 sendReply :: Bot -> Integer -> Maybe String -> Message -> Maybe (Bot, Request)
 sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> sticker' <|> video' <|> voice'
@@ -45,10 +45,14 @@ sendMessage bot chatId _ x
   where req = request' (getTokenTG (getConfig bot)) "/sendMessage"
 
 sendMedia :: Bot -> Integer -> Maybe T.Text -> String -> Media -> (Bot, Request)
-sendMedia bot chatId caption name media = (bot, req { requestBody = RequestBodyLBS
-                                                    $ encode $ object [ "chat_id" .= chatId
-                                                    , T.pack name .= file_id media
-                                                    , "caption" .= caption ] })
+sendMedia bot chatId caption name media
+  | caption == Nothing = (bot, req { requestBody = RequestBodyLBS
+                                   $ encode $ object [ "chat_id" .= chatId
+                                   , T.pack name .= file_id media ] })
+  | otherwise = (bot, req { requestBody = RequestBodyLBS
+                                   $ encode $ object [ "chat_id" .= chatId
+                                   , T.pack name .= file_id media
+                                   , "caption" .= caption ] })
   where req = request' (getTokenTG (getConfig bot)) ("/send" <> name)
 
 request' :: Token -> String -> Request

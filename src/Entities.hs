@@ -19,6 +19,8 @@ import Data.Map hiding (drop, take)
 import Network.HTTP.Client (Request, Manager, Response)
 import qualified Data.Text as T
 
+data Messenger = VK | TG deriving (Show, Eq)
+
 data User = User
           { id' :: Integer
           , is_bot' :: Bool
@@ -93,9 +95,8 @@ data Bot = Bot
          { getUsers :: Map UserId Repeat
          , getAction :: Action
          , getConfig :: Config
-         , getManager :: Manager
          , getOffset :: Offset
-         }
+         } deriving (Show, Eq)
 
 data Config = Config
             { getTokenTG :: Token
@@ -104,7 +105,7 @@ data Config = Config
             , getHelp :: T.Text
             , getRepeat :: T.Text
             , getDefault :: Repeat
-            }
+            } deriving (Show, Eq)
 
 buildConfig :: [(T.Text, T.Text)] -> Config
 buildConfig [] = Config mempty mempty DEBUG mempty mempty 1
