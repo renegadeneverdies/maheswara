@@ -28,31 +28,28 @@ sendReply bot chatId _ msg = message' <|> audio' <|> document' <|> photo' <|> st
         video' = sendMedia bot chatId (caption msg) "video" <$> video msg
         voice' = sendMedia bot chatId (caption msg) "voice" <$> voice msg
 
+composeMessage :: Integer -> T.Text -> Maybe KeyboardMarkup -> Value
+composeMessage chatId text (Just markup) = object ["chat_id" .= chatId, "text" .= text, "reply_markup" .= markup]
+composeMessage chatId text Nothing = object ["chat_id" .= chatId, "text" .= text]
+
 sendMessage :: Bot -> Integer -> Maybe T.Text -> T.Text -> (Bot, Request)
 sendMessage bot chatId _ x
-  | (T.unpack -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                      , "text" .= getHelp (getConfig bot) ] })
-  | (T.unpack -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                        , "text" .= getRepeat (getConfig bot)
-                                                                                        , "reply_markup" .= defaultKeyboard ] })
+  | (T.unpack -> "/help") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ composeMessage chatId (getHelp (getConfig bot)) Nothing })
+  | (T.unpack -> "/repeat") <- x = (bot, req { requestBody = RequestBodyLBS $ encode $ composeMessage chatId (getHelp (getConfig bot)) (Just defaultKeyboard) })
   | x' <- x = case T.uncons x' of
                 Just ('/', xs) -> (bot { getUsers = Map.insert chatId (read $ T.unpack xs) (getUsers bot) }
-                                  , req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                         , "text" .= (T.pack "Reply count set to" <> xs) ] })
-                Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ object [ "chat_id" .= chatId
-                                                                                             , "text" .= x ] })
+                                  , req { requestBody = RequestBodyLBS $ encode $ composeMessage chatId (T.pack "Reply count set to " <> xs) Nothing })
+                Just _         -> (bot, req { requestBody = RequestBodyLBS $ encode $ composeMessage chatId x Nothing})
                 Nothing        -> (bot, req)
   where req = request' (getTokenTG (getConfig bot)) "/sendMessage"
 
+composeMedia :: Integer -> Maybe T.Text -> T.Text -> Media -> Value
+composeMedia chatId (Just caption) name (Media fileId) = object ["chat_id" .= chatId, name .= fileId, "caption" .= caption]
+composeMedia chatId Nothing name (Media fileId) = object ["chat_id" .= chatId, name .= fileId]
+
 sendMedia :: Bot -> Integer -> Maybe T.Text -> String -> Media -> (Bot, Request)
-sendMedia bot chatId caption name media
-  | caption == Nothing = (bot, req { requestBody = RequestBodyLBS
-                                   $ encode $ object [ "chat_id" .= chatId
-                                   , T.pack name .= file_id media ] })
-  | otherwise = (bot, req { requestBody = RequestBodyLBS
-                                   $ encode $ object [ "chat_id" .= chatId
-                                   , T.pack name .= file_id media
-                                   , "caption" .= caption ] })
+sendMedia bot chatId caption name media = (bot, req { requestBody = RequestBodyLBS $ encode
+                                                    $ composeMedia chatId caption (T.pack name) media })
   where req = request' (getTokenTG (getConfig bot)) ("/send" <> name)
 
 request' :: Token -> String -> Request
